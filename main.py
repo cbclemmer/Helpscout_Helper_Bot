@@ -18,5 +18,5 @@ token = get_token(hs_id, hs_secret)
 
 api = HelpscoutAPI(token)
 conversations = api.list_conversations(1)
-for c in conversations:
-    print(c.to_string() + '\n\n')
+print(len(conversations))
+print(conversations[0].to_string() + '\n\n')
