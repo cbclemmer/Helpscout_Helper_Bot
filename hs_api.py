@@ -28,7 +28,7 @@ class Thread:
         self.id = data['id']
         self.body = ''
         if 'body' in data:
-            self.body = self._sanitize(markdownify.markdownify(data['body'], heading_style="ATX"))
+            self.body = markdownify.markdownify(data['body'], heading_style="ATX")
         self.action = ''
         if 'text' in data['action'].keys():
             self.action = data['action']['text']
@@ -38,9 +38,30 @@ class Thread:
     def _sanitize(self, text: str) -> str:
         # replace links with "LINK"
         text = re.sub(r'\[(.*?)\]\((.*?)\)', r'LINK', text)
+        text = re.sub(r'https?:\/\/[^\s]*', r'LINK', text)
+        text = re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', r'LINK', text)
         # replace images with "PICTURE"
         text = re.sub(r'!\[(.*?)\]\((.*?)\)', r'PICTURE', text)
+        text = re.sub(r'\+\d{1,3}\s\d{1,3}\s\d{1,4}\s\d{1,10}', r'PHONE_NUMBER', text)
+        text = re.sub(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', r'IP', text)
+        # text = re.sub(r'https?:\/\/[^\s]*\/login[^\s]*', r'LOGIN', text)
+        # text = re.sub(r'https?:\/\/[^\s]*\/instructor[^\s]*', r'INSTRUCTOR_SITE_LINK', text)
+        # text = re.sub(r'https?:\/\/scormfly[^\s]*', r'SCORMFLY_LINK', text)
+        # text = re.sub(r'\b\d{1,5}\s[a-zA-Z0-9\s]*[.,]?\s[a-zA-Z]{2,}\b', r'ADDRESS', text)
+        # text = re.sub(r'^.*This communication.*\n?', '', text, flags=re.MULTILINE)
+        # text = re.sub(r'^.*This email and any attachments.*\n?', '', text, flags=re.MULTILINE)
+        # text = re.sub(r'\b[A-Z][a-z]+\s([A-Z]\.\s)?[A-Z][a-z]+\b', r'NAME', text)
         return text
+
+    def for_gpt(self):
+        s = "###THREAD\n"
+        s += f"Type: {self.type}\n"
+        s += f"Source: {self.source}\n"
+        if self.action != "":
+            s += f"Action: {self.action}\n"
+        if self.body != "":
+            s += f"Body:\n{self._sanitize(self.body)}\n"
+        return s
 
     def to_string(self):
         return f"""
@@ -64,13 +85,26 @@ class Conversation:
             self.threads.append(Thread(t))
         self.threads.reverse()
 
+    def for_gpt(self):
+        threads = ""
+        for t in self.threads:
+            if t.type == "lineitem":
+                continue
+            threads += t.for_gpt() + '\n'
+
+        return f"""
+###CONVERSATION
+Subject: {self.subject}
+
+{threads}
+"""
+
     def to_string(self):
         threads = ""
         for t in self.threads:
             threads += t.to_string() + '\n'
 
         return f"""
-______________CONVERSATION_____________
 ID: {self.id}
 Created: {self.created}
 Status: {self.status}
