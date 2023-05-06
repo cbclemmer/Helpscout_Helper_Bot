@@ -1,4 +1,5 @@
 config.json
+fine_tune.json
 token.json
 __pycache__/
 conversation_lists/

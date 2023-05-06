@@ -4,6 +4,7 @@ import markdownify
 from typing import List
 import re
 import os
+from gpt import GptCompletion
 
 def open_file(filepath):
     with open(filepath, 'r', encoding='utf-8') as infile:
@@ -22,6 +23,15 @@ def _make_request_get(token, path: str, params):
     print(url)
     return requests.get(url, headers={
         "Authorization": f"Bearer {token}"
+    })
+
+def _make_request_post(token, path: str, params):
+    first = True
+    url = "https://api.helpscout.net/v2/" + path
+    print(url)
+    return requests.get(url, headers={
+        "Authorization": f"Bearer {token}",
+        "body": params
     })
 
 class Thread:
@@ -130,8 +140,13 @@ _____________________
         return completions
 
 class HelpscoutAPI:
-    def __init__(self, token: str):
-        self.token = token
+    def __init__(self, hs_token: str, openai_token: str):
+        self.token = hs_token
+        model = 'text-davinci-003'
+        if os.path.exists('fine_tune.json'):
+            model = json.loads(open_file('fine_tune.json'))['model']
+        print('Using model: ' + model)
+        self.complete = GptCompletion(openai_token, model)
 
     def save_conversation_list(self, file_name, conversations: List[Conversation]) -> None:
         folder = 'conversation_lists'
@@ -189,3 +204,51 @@ class HelpscoutAPI:
             for comp in completions:
                 f.write(json.dumps(comp) + '\n')
         print(f"Completions for {file_name} written to file")
+
+    def send_note(self, conv_id: str, text: str):
+        _make_request_post(self.token, f'conversations/{conv_id}/notes', {
+            "text": text
+        })
+
+    def process_user_message(self, message: str, conversation: Conversation):
+        message = message.lower().trim()
+        if message[:-1] != 'good bot ':
+            return
+        selected_message = -1
+        try:
+            selected_message = int(message[-1])
+        except:
+            return
+        if selected_message == -1 or selected_message > 3 or selected_message < 1:
+            return
+        last_thread = conversation.threads[-2]
+        last_message = last_thread.body
+        message_text = last_message.split('BOT: message ')[selected_message][1:]
+        last_thread.body = message_text
+        conversation.threads = conversation.threads[:-2]
+        conversation.threads.append(last_thread)
+        completion = conversation.get_completions()[-1]
+        with open('completions/fine_tune_queue.jsonl', 'a') as f:
+            f.write(json.dumps(completion))
+
+    def recieve_message(self, data_string: str):
+        conversation = Conversation(json.loads(data_string))
+        if conversation.threads[-1].source == 'user':
+            self.process_user_message(conversation.threads[-1], conversation)
+            return
+        prompt = conversation.for_gpt()
+        completions = self.complete.complete(prompt, {
+            "n": 3,
+            "max_tokens": 150
+        })
+        idx = 1
+        note = ''
+        for c in completions:
+            note += f"""<br><br>
+BOT: message {idx}<br>
+{c}<br>
+            """
+            idx += 1
+        self.send_note(conversation.id, note)
+
+
