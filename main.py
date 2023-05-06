@@ -17,9 +17,7 @@ hs_secret = config["helpscout_secret"]
 token = get_token(hs_id, hs_secret)
 
 api = HelpscoutAPI(token)
-# conversations = api.list_conversations(1)
-# print(len(conversations))
-# for c in conversations:
-#     print(c.for_gpt() + '\n\n')
-
-api.save_completions(1)
+conversations = api.list_conversations(1)
+print(len(conversations))
+for c in conversations:
+    print(c.for_gpt() + '\n\n')

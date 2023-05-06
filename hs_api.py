@@ -122,37 +122,35 @@ _____________________
                 continue
             if t.source == "user" and not first:
                 completions.append({
-                    "prompt": current_prompt,
-                    "completion": t.for_gpt()
+                    "prompt": current_prompt + '\n\n######\n\n',
+                    "completion": t.for_gpt() + '\n\n######\n\n'
                 })
             first = False
             current_prompt += t.for_gpt() + '\n'
         return completions
 
-
-
 class HelpscoutAPI:
     def __init__(self, token: str):
         self.token = token
 
-    def save_conversation_list(self, page, conversations) -> None:
+    def save_conversation_list(self, file_name, conversations: List[Conversation]) -> None:
         folder = 'conversation_lists'
         if not os.path.exists(folder):
             os.makedirs(folder)
-        file_name = f"{folder}/page_{page}.json"
-        if os.path.exists(file_name):
-            return
-        with open(file_name, 'w') as f:
+        path = f"{folder}/{file_name}.json"
+        if os.path.exists(path):
+            raise f"Error file {file_name} already exists"
+        with open(path, 'w') as f:
             f.writelines(json.dumps(conversations))
 
-    def load_conversation_list(self, page) -> List[Conversation]:
+    def load_conversation_list(self, file_name) -> List[Conversation]:
         folder = 'conversation_lists'
         if not os.path.exists(folder):
             return None
-        file_name = f"{folder}/page_{page}.json"
-        if not os.path.exists(file_name):
+        path = f"{folder}/{file_name}.json"
+        if not os.path.exists(path):
             return None
-        data = json.loads(open_file(file_name))
+        data = json.loads(open_file(path))
         ret_val = []
         for c in data:
             ret_val.append(Conversation(c))
@@ -175,8 +173,7 @@ class HelpscoutAPI:
                 convs.append(Conversation(c))
         return convs
     
-    def save_completions(self, page: int) -> None:
-        convs = self.list_conversations(page)
+    def save_completions(self, file_name: str, convs: List[Conversation]) -> None:
         completions = []
         for c in convs:
             comps = c.get_completions()
@@ -185,8 +182,10 @@ class HelpscoutAPI:
         folder = 'completions'
         if not os.path.exists(folder):
             os.makedirs(folder)
-        file_name = f"{folder}/page_{page}.jsonl"
-        with open(file_name, 'w') as f:
+        path = f"{folder}/{file_name}.jsonl"
+        if os.path.exists(path):
+            raise f"Error file {file_name} already exists"
+        with open(path, 'w') as f:
             for comp in completions:
                 f.write(json.dumps(comp) + '\n')
-        print(f"Completions for page {page} written to file")
+        print(f"Completions for {file_name} written to file")
