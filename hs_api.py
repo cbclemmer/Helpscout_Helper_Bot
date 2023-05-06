@@ -1,6 +1,7 @@
 import requests
 import json
 import markdownify
+from typing import List
 import re
 import os
 
@@ -36,21 +37,12 @@ class Thread:
         self.source = data['source']['via']
 
     def _sanitize(self, text: str) -> str:
-        # replace links with "LINK"
-        text = re.sub(r'\[(.*?)\]\((.*?)\)', r'LINK', text)
-        text = re.sub(r'https?:\/\/[^\s]*', r'LINK', text)
+        # text = re.sub(r'\[(.*?)\]\((.*?)\)', r'LINK', text)
+        # text = re.sub(r'https?:\/\/[^\s]*', r'LINK', text)
         text = re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', r'LINK', text)
-        # replace images with "PICTURE"
         text = re.sub(r'!\[(.*?)\]\((.*?)\)', r'PICTURE', text)
         text = re.sub(r'\+\d{1,3}\s\d{1,3}\s\d{1,4}\s\d{1,10}', r'PHONE_NUMBER', text)
         text = re.sub(r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3}', r'IP', text)
-        # text = re.sub(r'https?:\/\/[^\s]*\/login[^\s]*', r'LOGIN', text)
-        # text = re.sub(r'https?:\/\/[^\s]*\/instructor[^\s]*', r'INSTRUCTOR_SITE_LINK', text)
-        # text = re.sub(r'https?:\/\/scormfly[^\s]*', r'SCORMFLY_LINK', text)
-        # text = re.sub(r'\b\d{1,5}\s[a-zA-Z0-9\s]*[.,]?\s[a-zA-Z]{2,}\b', r'ADDRESS', text)
-        # text = re.sub(r'^.*This communication.*\n?', '', text, flags=re.MULTILINE)
-        # text = re.sub(r'^.*This email and any attachments.*\n?', '', text, flags=re.MULTILINE)
-        # text = re.sub(r'\b[A-Z][a-z]+\s([A-Z]\.\s)?[A-Z][a-z]+\b', r'NAME', text)
         return text
 
     def for_gpt(self):
@@ -74,6 +66,13 @@ Source: {self.source}
 """
 
 class Conversation:
+    text: str
+    id: str
+    subject: str
+    created: str
+    status: str
+    threads: List[Thread]
+
     def __init__(self, data):
         self.text = json.dumps(data)
         self.id = data['id']
@@ -114,12 +113,29 @@ _____________________
 {threads}
 """
 
+    def get_completions(self):
+        completions = []
+        current_prompt = ''
+        first = True
+        for t in self.threads:
+            if t.type == "lineitem":
+                continue
+            if t.source == "user" and not first:
+                completions.append({
+                    "prompt": current_prompt,
+                    "completion": t.for_gpt()
+                })
+            first = False
+            current_prompt += t.for_gpt() + '\n'
+        return completions
+
+
 
 class HelpscoutAPI:
     def __init__(self, token: str):
         self.token = token
 
-    def save_conversation_list(self, page, conversations):
+    def save_conversation_list(self, page, conversations) -> None:
         folder = 'conversation_lists'
         if not os.path.exists(folder):
             os.makedirs(folder)
@@ -129,7 +145,7 @@ class HelpscoutAPI:
         with open(file_name, 'w') as f:
             f.writelines(json.dumps(conversations))
 
-    def load_conversation_list(self, page):
+    def load_conversation_list(self, page) -> List[Conversation]:
         folder = 'conversation_lists'
         if not os.path.exists(folder):
             return None
@@ -142,7 +158,7 @@ class HelpscoutAPI:
             ret_val.append(Conversation(c))
         return ret_val
 
-    def list_conversations(self, page: int):
+    def list_conversations(self, page: int) -> List[Conversation]:
         convs = self.load_conversation_list(page)
         if convs is None:
             print("API REQUEST")
@@ -158,3 +174,19 @@ class HelpscoutAPI:
             for c in data:
                 convs.append(Conversation(c))
         return convs
+    
+    def save_completions(self, page: int) -> None:
+        convs = self.list_conversations(page)
+        completions = []
+        for c in convs:
+            comps = c.get_completions()
+            for comp in comps: 
+                completions.append(comp)
+        folder = 'completions'
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+        file_name = f"{folder}/page_{page}.jsonl"
+        with open(file_name, 'w') as f:
+            for comp in completions:
+                f.write(json.dumps(comp) + '\n')
+        print(f"Completions for page {page} written to file")
