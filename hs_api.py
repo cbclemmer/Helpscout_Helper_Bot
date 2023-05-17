@@ -4,11 +4,17 @@ import markdownify
 from typing import List
 import re
 import os
+import tiktoken
 from gpt import GptCompletion
+from get_token import get_token
 
 def open_file(filepath):
     with open(filepath, 'r', encoding='utf-8') as infile:
         return infile.read()
+
+def save_file(filepath, data):
+    with open(filepath, 'w', encoding='utf-8') as f:
+        f.writelines(data)
 
 def _make_request_get(token, path: str, params):
     query = "?"
@@ -34,6 +40,21 @@ def _make_request_post(token, path: str, params):
         "body": params
     })
 
+def count_tokens_for_file(filepath: str):
+    objects = open_file(filepath).split('\n')
+    encoding = tiktoken.encoding_for_model('text-davinci-003')
+    total_tokens = 0
+    print(f"File contains {len(objects)} completions")
+    for o in objects:
+        data = {}
+        try:
+            data = json.loads(o)
+        except:
+            continue
+        total_tokens += len(encoding.encode(data["prompt"]))
+        total_tokens += len(encoding.encode(data["completion"]))
+    return total_tokens
+
 class Thread:
     def __init__(self, data):
         self.id = data['id']
@@ -41,14 +62,14 @@ class Thread:
         if 'body' in data:
             self.body = markdownify.markdownify(data['body'], heading_style="ATX")
         self.action = ''
-        if 'text' in data['action'].keys():
+        if 'action' in data.keys() and 'text' in data['action'].keys():
             self.action = data['action']['text']
         self.type = data['type']
         self.source = data['source']['via']
 
     def _sanitize(self, text: str) -> str:
-        # text = re.sub(r'\[(.*?)\]\((.*?)\)', r'LINK', text)
-        # text = re.sub(r'https?:\/\/[^\s]*', r'LINK', text)
+        text = re.sub(r'\[(.*?)\]\((.*?)\)', r'LINK', text)
+        text = re.sub(r'https?:\/\/[^\s]*', r'LINK', text)
         text = re.sub(r'\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b', r'LINK', text)
         text = re.sub(r'!\[(.*?)\]\((.*?)\)', r'PICTURE', text)
         text = re.sub(r'\+\d{1,3}\s\d{1,3}\s\d{1,4}\s\d{1,10}', r'PHONE_NUMBER', text)
@@ -140,9 +161,8 @@ _____________________
         return completions
 
 class HelpscoutAPI:
-    def __init__(self, hs_token: str, openai_token: str):
+    def __init__(self, hs_token: str, openai_token: str, model: str):
         self.token = hs_token
-        model = 'text-davinci-003'
         if os.path.exists('fine_tune.json'):
             model = json.loads(open_file('fine_tune.json'))['model']
         print('Using model: ' + model)
@@ -177,7 +197,8 @@ class HelpscoutAPI:
             print("API REQUEST")
             res = _make_request_get(self.token, 'conversations', {
                 "page": page,
-                "embed": "threads"
+                "embed": "threads",
+                "status": "closed"
             })
             if res.status_code != 200:
                 raise res.text
@@ -198,8 +219,8 @@ class HelpscoutAPI:
         if not os.path.exists(folder):
             os.makedirs(folder)
         path = f"{folder}/{file_name}.jsonl"
-        if os.path.exists(path):
-            raise f"Error file {file_name} already exists"
+        print(f"Saving {len(convs)} conversations")
+        print(f"Saving {len(completions)} completions")
         with open(path, 'w') as f:
             for comp in completions:
                 f.write(json.dumps(comp) + '\n')
@@ -251,4 +272,6 @@ BOT: message {idx}<br>
             idx += 1
         self.send_note(conversation.id, note)
 
-
+    def create_fine_tune(self, filename: str):
+        os.environ('OPENAI_API_KEY=' + self.complete.api_key)
+        os.system(f"openai api fine_tunes.create -t completions/{filename}.jsonl -m {self.complete.model}")
