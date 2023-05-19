@@ -5,3 +5,5 @@ __pycache__/
 conversation_lists/
 helper_bot/
 completions/
+log.txt
+messages.jsonl

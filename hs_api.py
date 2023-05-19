@@ -5,8 +5,9 @@ from typing import List
 import re
 import os
 import tiktoken
+from datetime import datetime
 from gpt import GptCompletion
-from get_token import get_token
+import shutil
 
 def open_file(filepath):
     with open(filepath, 'r', encoding='utf-8') as infile:
@@ -231,31 +232,36 @@ class HelpscoutAPI:
             "text": text
         })
 
-    def process_user_message(self, message: str, conversation: Conversation):
-        message = message.lower().trim()
-        if message[:-1] != 'good bot ':
+    def process_user_message(self, conversation_data: object):
+        conversation = Conversation(conversation_data)
+        message = conversation.threads[-1]
+        if 'good bot' not in message.body or message.source != 'user':
             return
         selected_message = -1
         try:
-            selected_message = int(message[-1])
+            selected_message = int(message.body[-1])
         except:
             return
         if selected_message == -1 or selected_message > 3 or selected_message < 1:
             return
         last_thread = conversation.threads[-2]
         last_message = last_thread.body
-        message_text = last_message.split('BOT: message ')[selected_message][1:]
+        message_text = last_message.split('BOT: message')[selected_message][1:]
         last_thread.body = message_text
         conversation.threads = conversation.threads[:-2]
         conversation.threads.append(last_thread)
         completion = conversation.get_completions()[-1]
         with open('completions/fine_tune_queue.jsonl', 'a') as f:
             f.write(json.dumps(completion))
+        with open('log.txt', 'a') as f:
+            now = datetime.now()
+            pretty_datetime = now.strftime("%B %d, %Y %H:%M:%S")
+            f.write(f'{pretty_datetime}: Feedback recieved for response {selected_message} on conversation {conversation.id}')
 
-    def recieve_message(self, data_string: str):
-        conversation = Conversation(json.loads(data_string))
+    def recieve_message(self, data: object):
+        conversation = Conversation(data)
         if conversation.threads[-1].source == 'user':
-            self.process_user_message(conversation.threads[-1], conversation)
+            self.process_user_message(data)
             return
         prompt = conversation.for_gpt()
         completions = self.complete.complete(prompt, {
@@ -266,12 +272,24 @@ class HelpscoutAPI:
         note = ''
         for c in completions:
             note += f"""<br><br>
-BOT: message {idx}<br>
+BOT: message<br>
 {c}<br>
             """
             idx += 1
         self.send_note(conversation.id, note)
+        with open('log.txt', 'a') as f:
+            now = datetime.now()
+            pretty_datetime = now.strftime("%B %d, %Y %H:%M:%S")
+            f.write(f'{pretty_datetime}: Sent note on conversation {conversation.id}')
 
     def create_fine_tune(self, filename: str):
         os.environ('OPENAI_API_KEY=' + self.complete.api_key)
-        os.system(f"openai api fine_tunes.create -t completions/{filename}.jsonl -m {self.complete.model}")
+        path = f'completions/{filename}.jsonl'
+        os.system(f"openai api fine_tunes.create -t {path} -m {self.complete.model} --n_epochs 1")
+        now = datetime.now()
+        with open('log.txt', 'a') as f:
+            tokens = count_tokens_for_file(path)
+            pretty_datetime = now.strftime("%B %d, %Y %H:%M:%S")
+            f.write(f'{pretty_datetime}: Fine tune started, ran with {tokens} tokens')
+
+        shutil.move(path, f'completions/{now.strftime("%Y_%m_%dT%H_%M_%S")}_fine_tune.jsonl')
