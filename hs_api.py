@@ -8,14 +8,8 @@ import tiktoken
 from datetime import datetime
 from gpt import GptCompletion
 import shutil
-
-def open_file(filepath):
-    with open(filepath, 'r', encoding='utf-8') as infile:
-        return infile.read()
-
-def save_file(filepath, data):
-    with open(filepath, 'w', encoding='utf-8') as f:
-        f.writelines(data)
+from get_token import get_token
+from util import open_file
 
 def _make_request_get(token, path: str, params):
     query = "?"
@@ -232,8 +226,7 @@ class HelpscoutAPI:
             "text": text
         })
 
-    def process_user_message(self, conversation_data: object):
-        conversation = Conversation(conversation_data)
+    def process_user_message(self, conversation: Conversation):
         message = conversation.threads[-1]
         if 'good bot' not in message.body or message.source != 'user':
             return
@@ -260,8 +253,11 @@ class HelpscoutAPI:
 
     def recieve_message(self, data: object):
         conversation = Conversation(data)
+        self.recieve_conversation(conversation)
+
+    def recieve_conversation(self, conversation: Conversation):
         if conversation.threads[-1].source == 'user':
-            self.process_user_message(data)
+            self.process_user_message(conversation)
             return
         prompt = conversation.for_gpt()
         completions = self.complete.complete(prompt, {
@@ -293,3 +289,16 @@ BOT: message<br>
             f.write(f'{pretty_datetime}: Fine tune started, ran with {tokens} tokens')
 
         shutil.move(path, f'completions/{now.strftime("%Y_%m_%dT%H_%M_%S")}_fine_tune.jsonl')
+
+def load_api():
+    if not os.path.exists('config.json'):
+        raise "Error: Config not found"
+    config = json.loads(open_file('config.json'))
+    hs_id = config["helpscout_id"]
+    hs_secret = config["helpscout_secret"]
+    openai_token = config["openai_key"]
+
+    token = get_token(hs_id, hs_secret)
+
+    api = HelpscoutAPI(token, openai_token, 'davinci')
+    return api

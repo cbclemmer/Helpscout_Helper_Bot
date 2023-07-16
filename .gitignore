@@ -7,3 +7,5 @@ helper_bot/
 completions/
 log.txt
 messages.jsonl
+.env
+env/
