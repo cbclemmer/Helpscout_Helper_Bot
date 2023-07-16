@@ -11,3 +11,4 @@ messages.jsonl
 env/
 output.log
 watcher_output.log
+responded_conversations.json
