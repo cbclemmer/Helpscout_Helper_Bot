@@ -22,14 +22,14 @@ while time() - start_time < lifetime:
     res_hash = to_sha(responded_conversations)
     for conv in convs:
         print(f'Found conversation: {conv.id}')
-        hash = to_sha(conv.for_gpt())
-        if conv.id in responded_conversations.keys() and responded_conversations[conv.id] == hash:
+        conv_hash = to_sha(conv.for_gpt())
+        if conv.id in responded_conversations.keys() and responded_conversations[conv.id] == conv_hash:
             continue
         print(f'New Conversation: {conv.id}')
-        responded_conversations[conv.id] = hash
+        responded_conversations[conv.id] = conv_hash
         api.recieve_conversation(conv)
-        break
 
     if to_sha(responded_conversations) != res_hash:
+        print('Conversations changed, saving sha file')
         save_file(responded_conversations_file, json.dumps(responded_conversations))
     sleep(heart_beat_time)

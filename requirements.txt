@@ -3,3 +3,4 @@ markdownify
 openai
 tiktoken
 flask
+tiktoken

@@ -21,7 +21,7 @@ def _make_request_get(token, path: str, params):
             first = False
         query += f"{k}={params[k]}"
     url = "https://api.helpscout.net/v2/" + path + query
-    print(url)
+    print(f'GET: {url}')
     return requests.get(url, headers={
         "Authorization": f"Bearer {token}"
     })
@@ -29,11 +29,11 @@ def _make_request_get(token, path: str, params):
 def _make_request_post(token, path: str, params):
     first = True
     url = "https://api.helpscout.net/v2/" + path
-    print(url)
-    return requests.get(url, headers={
-        "Authorization": f"Bearer {token}",
-        "body": params
-    })
+    print(f'POST: {url}')
+    return requests.post(url, 
+        headers={ "Authorization": f"Bearer {token}" }, 
+        json=params
+    )
 
 def count_tokens_for_file(filepath: str):
     objects = open_file(filepath).split('\n')
@@ -226,6 +226,7 @@ class HelpscoutAPI:
         print(f"Completions for {file_name} written to file")
 
     def send_note(self, conv_id: str, text: str):
+        print(f'Sending Note for conv: {conv_id}')
         _make_request_post(self.token, f'conversations/{conv_id}/notes', {
             "text": text
         })
@@ -261,8 +262,8 @@ class HelpscoutAPI:
         self.recieve_conversation(conversation)
 
     def recieve_conversation(self, conversation: Conversation):
-        print(conversation.data) 
-        if conversation.threads[-1].source == 'user':
+        last_thread = conversation.threads[-1]
+        if last_thread.source == 'user' and last_thread.type != 'lineitem':
             self.process_user_message(conversation)
             return
        
@@ -274,9 +275,13 @@ class HelpscoutAPI:
         print('Got completion')
         idx = 1
         note = ''
+        stop_token = '\n\n######\n\n'
         for c in completions:
+            if stop_token in c:
+                c = c.split(stop_token)[0]
+            c = c.replace('\n', '<br>\n')
             note += f"""<br><br>
-BOT: message<br>
+<h1>BOT: message</h1>
 {c}<br>
             """
             idx += 1
@@ -305,8 +310,11 @@ def load_api():
     hs_id = config["helpscout_id"]
     hs_secret = config["helpscout_secret"]
     openai_token = config["openai_key"]
+    fine_tune_id = 'davinci'
+    if 'fine_tune_id' in config:
+        fine_tune_id = config['fine_tune_id']
 
     token = get_token(hs_id, hs_secret)
 
-    api = HelpscoutAPI(token, openai_token, 'davinci')
+    api = HelpscoutAPI(token, openai_token, fine_tune_id)
     return api

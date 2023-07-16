@@ -1,0 +1,3 @@
+Watcher will not work becauese when you create a new note in the thread the sha changes so it will continue making notes, thus making the sha change every time
+Something in the formatting in the completions are making the '###CONVERSATION' string appear in the completion
+Something in the formatting in the completions are making the completion return multiple '###THREAD' in the completion
