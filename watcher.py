@@ -18,9 +18,10 @@ print('Started Watcher')
 
 start_time = time()
 while time() - start_time < lifetime:
-    convs = api.list_conversations(1)
+    convs = api.list_conversations(1, True, False)
     res_hash = to_sha(responded_conversations)
     for conv in convs:
+        print(f'Found conversation: {conv.id}')
         hash = to_sha(conv.for_gpt())
         if conv.id in responded_conversations.keys() and responded_conversations[conv.id] == hash:
             continue

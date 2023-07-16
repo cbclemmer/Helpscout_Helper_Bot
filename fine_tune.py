@@ -6,7 +6,7 @@ conversations = []
 current_page = 300
 while current_page >= 290:
     print(f"page {current_page}")
-    convs = api.list_conversations(current_page)
+    convs = api.list_conversations(current_page, False)
     for c in convs:
         conversations.append(c)
     current_page -= 1

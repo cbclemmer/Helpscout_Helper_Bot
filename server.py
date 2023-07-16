@@ -14,7 +14,7 @@ def process_data(data_string):
     return jsonify({ 'responded': True }), 200
 
 class RequestHandler(BaseHTTPRequestHandler):
-    def do_POST(self):
+    def do_GET(self):
         content_length = int(self.headers['Content-Length'])
         post_data = self.rfile.read(content_length).decode('utf-8')
         process_data(post_data)

@@ -55,6 +55,7 @@ class Thread:
         self.id = data['id']
         self.body = ''
         if 'body' in data:
+            print(data['body'])
             self.body = markdownify.markdownify(data['body'], heading_style="ATX")
         self.action = ''
         if 'action' in data.keys() and 'text' in data['action'].keys():
@@ -106,7 +107,6 @@ class Conversation:
         self.created = data['createdAt']
         self.status = data['status']
         self.threads = []
-        self.data = json.dumps(data)
         for t in data['_embedded']['threads']:
             self.threads.append(Thread(t))
         self.threads.reverse()
@@ -231,7 +231,6 @@ class HelpscoutAPI:
         })
 
     def process_user_message(self, conversation: Conversation):
-        print(f'Processing user message for conversation {conversation.id}')
         message = conversation.threads[-1]
         if 'good bot' not in message.body or message.source != 'user':
             return
@@ -261,8 +260,7 @@ class HelpscoutAPI:
         self.recieve_conversation(conversation)
 
     def recieve_conversation(self, conversation: Conversation):
-       print(conversation.data) 
-       if conversation.threads[-1].source == 'user':
+        if conversation.threads[-1].source == 'user':
             self.process_user_message(conversation)
             return
         prompt = conversation.for_gpt()
@@ -270,7 +268,6 @@ class HelpscoutAPI:
             "n": 3,
             "max_tokens": 150
         })
-        print('Got completion')
         idx = 1
         note = ''
         for c in completions:
