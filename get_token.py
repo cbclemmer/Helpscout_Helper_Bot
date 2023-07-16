@@ -39,7 +39,9 @@ def get_token(hs_id, hs_secret):
             httpd.server_close()
             print('Closing server')
         else:
-            os.system(f'firefox https://secure.helpscout.net/authentication/authorizeClientApplication?client_id={hs_id}&state={hs_secret}')
+            url = f'https://secure.helpscout.net/authentication/authorizeClientApplication?client_id={hs_id}&state={hs_secret}'
+            print(url)
+            os.system(f'firefox {url}')
             os._exit(pid)
         code = open_file('code.txt')
         os.remove('code.txt')

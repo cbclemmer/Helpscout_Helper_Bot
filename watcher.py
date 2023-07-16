@@ -1,9 +1,8 @@
 import os
 import json
-import hashlib
 from time import time, sleep
 from hs_api import load_api
-from util import open_file, save_file
+from util import open_file, save_file, to_sha
 
 lifetime = 8 * 60 * 60
 heart_beat_time = 5 * 60
@@ -15,19 +14,21 @@ responded_conversations = { }
 if os.path.exists(responded_conversations_file):
     responded_conversations = json.loads(open_file(responded_conversations_file))
 
+print('Started Watcher')
+
 start_time = time()
 while time() - start_time < lifetime:
     convs = api.list_conversations(1)
-    res_hash = hashlib.sha256(json.dumps(responded_conversations)).hexdigest()
+    res_hash = to_sha(responded_conversations)
     for conv in convs:
-        hash = hashlib.sha256(conv.for_gpt()).hexdigest()
+        hash = to_sha(conv.for_gpt())
         if conv.id in responded_conversations.keys() and responded_conversations[conv.id] == hash:
             continue
         print(f'New Conversation: {conv.id}')
         responded_conversations[conv.id] = hash
         api.recieve_conversation(conv)
-	break
+        break
 
-    if hashlib.sha256(json.dumps(responded_conversations)).hexdigest() != res_hash:
+    if to_sha(responded_conversations) != res_hash:
         save_file(responded_conversations_file, json.dumps(responded_conversations))
     sleep(heart_beat_time)
