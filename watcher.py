@@ -21,11 +21,11 @@ while time() - start_time < lifetime:
     res_hash = hashlib.sha256(json.dumps(responded_conversations)).hexdigest()
     for conv in convs:
         hash = hashlib.sha256(conv.for_gpt()).hexdigest()
-        if conv.id in responded_conversations.keys():
-            if responded_conversations[conv.id] == hash:
-                continue
-            responded_conversations[conv.id] = hash
-            api.recieve_conversation(conv)
+        if conv.id in responded_conversations.keys() and responded_conversations[conv.id] == hash:
+            continue
+        print(f'New Conversation: {conv.id}')
+        responded_conversations[conv.id] = hash
+        api.recieve_conversation(conv)
 
     if hashlib.sha256(json.dumps(responded_conversations)).hexdigest() != res_hash:
         save_file(responded_conversations_file, json.dumps(responded_conversations))
