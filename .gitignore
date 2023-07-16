@@ -10,3 +10,4 @@ messages.jsonl
 .env
 env/
 output.log
+watcher_output.log

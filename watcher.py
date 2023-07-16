@@ -26,6 +26,7 @@ while time() - start_time < lifetime:
         print(f'New Conversation: {conv.id}')
         responded_conversations[conv.id] = hash
         api.recieve_conversation(conv)
+	break
 
     if hashlib.sha256(json.dumps(responded_conversations)).hexdigest() != res_hash:
         save_file(responded_conversations_file, json.dumps(responded_conversations))
