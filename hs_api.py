@@ -261,10 +261,11 @@ class HelpscoutAPI:
         self.recieve_conversation(conversation)
 
     def recieve_conversation(self, conversation: Conversation):
-       print(conversation.data) 
-       if conversation.threads[-1].source == 'user':
+        print(conversation.data) 
+        if conversation.threads[-1].source == 'user':
             self.process_user_message(conversation)
             return
+       
         prompt = conversation.for_gpt()
         completions = self.complete.complete(prompt, {
             "n": 3,
