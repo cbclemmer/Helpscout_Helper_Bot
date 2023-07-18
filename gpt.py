@@ -1,4 +1,5 @@
 import openai
+import tiktoken
 
 class GptCompletion:
     def __init__(self, api_key: str, model: str) -> None:
