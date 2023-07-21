@@ -6,10 +6,10 @@ import re
 import os
 import tiktoken
 from datetime import datetime
-from gpt import GptCompletion
+from gpt import GptCompletion, GptChat
 import shutil
 from get_token import get_token
-from util import open_file
+from util import open_file, get_pretty_date
 
 def _make_request_get(token, path: str, params):
     query = "?"
@@ -233,12 +233,31 @@ class HelpscoutAPI:
 
     def process_user_message(self, conversation: Conversation):
         print(f'Processing user message for conversation {conversation.id}')
-        message = conversation.threads[-1]
-        if 'good bot' not in message.body or message.source != 'user':
+        message = conversation.threads[-1].body
+        if '@HelperBot' not in message or message.source != 'user':
+            return
+        if 'good bot' in message:
+            return self.process_good_bot(conversation, message)
+        if 'summarize' in message:
+            return self.summarize_conversation(conversation)
+        
+    def summarize_conversation(self, conversation: Conversation):
+        conv_str = conversation.for_gpt()
+        chat = GptChat(self.complete.api_key, 'summarize.prompt')
+        try:
+            msg = chat.send(conv_str, 'user', 200)
+            self.send_note(conversation.id, msg)
+        except Exception as e:
+            print(e)
+            return
+        print(f'{get_pretty_date()}: Summarized conversation {conversation.id}')
+
+    def process_good_bot(self, conversation: Conversation, message: str):
+        if 'good bot' not in message or message.source != 'user':
             return
         selected_message = -1
         try:
-            selected_message = int(message.body[-1])
+            selected_message = int(message[-1])
         except:
             return
         if selected_message == -1 or selected_message > 3 or selected_message < 1:
@@ -253,9 +272,7 @@ class HelpscoutAPI:
         with open('completions/fine_tune_queue.jsonl', 'a') as f:
             f.write(json.dumps(completion))
         with open('log.txt', 'a') as f:
-            now = datetime.now()
-            pretty_datetime = now.strftime("%B %d, %Y %H:%M:%S")
-            f.write(f'{pretty_datetime}: Feedback recieved for response {selected_message} on conversation {conversation.id}')
+            f.write(f'{get_pretty_date()}: Feedback recieved for response {selected_message} on conversation {conversation.id}')
 
     def recieve_message(self, data: object):
         conversation = Conversation(data)
