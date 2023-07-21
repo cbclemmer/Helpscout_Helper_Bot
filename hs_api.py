@@ -289,7 +289,7 @@ class HelpscoutAPI:
         with open('log.txt', 'a') as f:
             now = datetime.now()
             pretty_datetime = now.strftime("%B %d, %Y %H:%M:%S")
-            f.write(f'{pretty_datetime}: Sent note on conversation {conversation.id}')
+            f.write(f'{pretty_datetime}: Sent note on conversation {conversation.id}\n')
 
     def create_fine_tune(self, filename: str):
         os.environ('OPENAI_API_KEY=' + self.complete.api_key)

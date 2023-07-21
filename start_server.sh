@@ -1,3 +1,3 @@
 #!/bin/bash
 
-nohup python server.py > server_output.log 2>&1 &
+nohup python hs_bot_server.py > server_output.log &
