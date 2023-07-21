@@ -9,7 +9,7 @@ api = load_api()
 def process_data(data_string):
     data = json.loads(data_string)
     with open('raw_recieve.txt', 'a') as f:
-        f.write(data + '\n\n\n\n\n\n')
+        f.write(data_string + '\n\n\n\n\n\n')
     with open('messages.jsonl', 'a') as f:
         f.write(json.dumps(data) + '\n')
     api.recieve_message(data)
