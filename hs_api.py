@@ -260,7 +260,7 @@ class HelpscoutAPI:
     def process_user_message(self, conversation: Conversation):
         print(f'Processing user message for conversation {conversation.id}')
         message = conversation.threads[-1].body
-        if '@HelperBot' not in message:
+        if '@ScoutBot' not in message:
             return
         if 'good bot' in message:
             return self.process_good_bot(conversation, message)
@@ -272,7 +272,7 @@ class HelpscoutAPI:
         chat = GptChat('summarize.prompt')
         try:
             msg = chat.send(conv_str, 300)
-            self.send_note(conversation.id, f'<h2>Helper Bot 🤖</h2><p><b>I summarized the conversation for you:</b></p><p>{msg}</p>')
+            self.send_note(conversation.id, f'<h2>Scout Bot 🤖</h2><p><b>I summarized the conversation for you:</b></p><p>{msg}</p>')
         except Exception as e:
             print(e)
             return
