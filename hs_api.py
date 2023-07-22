@@ -243,7 +243,7 @@ class HelpscoutAPI:
         
     def summarize_conversation(self, conversation: Conversation):
         conv_str = conversation.for_gpt()
-        chat = GptChat(self.complete.api_key, 'summarize.prompt')
+        chat = GptChat('summarize.prompt')
         try:
             msg = chat.send(conv_str, 'user', 200)
             self.send_note(conversation.id, msg)
