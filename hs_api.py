@@ -17,7 +17,7 @@ def refresh_token():
         raise Exception('Token File does not exist, please manually authenticate')
     token_data = json.loads(open_file('token.json'))
     config = json.loads(open_file('config.json'))
-    res = requests.post('https://api.helpscout.net/v2/oauth2/token', json={
+    res = requests.post('https://api.helpscout.net/v2/oauth2/token', data={
         "refresh_token": token_data['refresh_token'],
         "client_id": config['helpscout_id'],
         "client_secret": config['helpscout_secret'],
