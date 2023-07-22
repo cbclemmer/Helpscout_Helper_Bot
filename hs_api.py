@@ -277,6 +277,7 @@ class HelpscoutAPI:
             print(e)
             return
         print(f'{get_pretty_date()}: Summarized conversation {conversation.id}')
+        chat.save_completions(f'summarize_{conversation.id}')
 
     def process_good_bot(self, conversation: Conversation, message: str):
         if 'good bot' not in message or message.source != 'user':

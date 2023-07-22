@@ -95,7 +95,7 @@ class GptChat:
         text = ''
         for completion in self.conversations:
             text += json.dumps(completion.to_object()) + '\n'
-        today = datetime.date.today().strftime("%Y-%m-%d")
+        today = datetime.date.today().strftime("%Y-%m-%d-%H-%M")
 
         if not os.path.exists('completions'):
             os.mkdir('completions')
