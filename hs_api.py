@@ -234,7 +234,7 @@ class HelpscoutAPI:
     def process_user_message(self, conversation: Conversation):
         print(f'Processing user message for conversation {conversation.id}')
         message = conversation.threads[-1].body
-        if '@HelperBot' not in message or message.source != 'user':
+        if '@HelperBot' not in message or message != 'user':
             return
         if 'good bot' in message:
             return self.process_good_bot(conversation, message)

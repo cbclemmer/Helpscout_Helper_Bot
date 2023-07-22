@@ -24,7 +24,7 @@ class RequestHandler(BaseHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
             self.end_headers()
-            self.wfile.write('success')
+            self.wfile.write('success'.encode())
 
 def run_server(port):
     server_address = ('', port)
