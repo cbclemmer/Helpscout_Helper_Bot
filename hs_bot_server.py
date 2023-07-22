@@ -20,6 +20,8 @@ class RequestHandler(BaseHTTPRequestHandler):
             content_length = int(self.headers['Content-Length'])
             post_data = self.rfile.read(content_length).decode('utf-8')
             process_data(post_data)
+        except Exception as e:
+            print(e)
         finally:
             self.send_response(200)
             self.send_header('Content-type', 'text/plain')
