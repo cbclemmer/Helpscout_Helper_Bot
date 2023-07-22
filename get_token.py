@@ -46,19 +46,26 @@ def get_token(hs_id, hs_secret):
         code = open_file('code.txt')
         os.remove('code.txt')
         
-        token = requests.post('https://api.helpscout.net/v2/oauth2/token', data={
-            "code": code,
-            "client_id": hs_id,
-            "client_secret": hs_secret,
-            "grant_type": "authorization_code"
-        }).text
-        
-        with open('token.json', 'w') as f:
-            f.writelines(token)
-        auth_token = json.loads(token)['access_token']
+        auth_token = create_token_file(code, hs_id, hs_secret)
     else:
         auth_token = json.loads(open_file('token.json'))['access_token']
     
     print("Authentication Successful")
     
     return auth_token
+
+def create_token_file(code: str, hs_id: str, hs_secret: str):
+    res = requests.post('https://api.helpscout.net/v2/oauth2/token', data={
+        "code": code,
+        "client_id": hs_id,
+        "client_secret": hs_secret,
+        "grant_type": "authorization_code"
+    })
+
+    if res.status_code != 200:
+        raise Exception(f'Error getting token\n{res.content.decode()}')
+    
+    token = res.json()
+    with open('token.json', 'w') as f:
+        f.writelines(token)
+    return json.loads(token)['access_token']
