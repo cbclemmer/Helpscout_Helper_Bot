@@ -26,7 +26,7 @@ def refresh_token():
     if res.status_code != 200:
         raise Exception(f'Error refreshing token, please manually authenticate\n{res.content.decode()}')
     data = res.json()
-    save_file(json.dumps(data))
+    save_file('token.json' json.dumps(data))
     print('Token refreshed successfully')
     return data['access_token']
 
