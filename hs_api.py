@@ -9,31 +9,26 @@ from datetime import datetime
 from gpt import GptCompletion, GptChat
 import shutil
 from get_token import get_token
-from util import open_file, get_pretty_date
+from util import open_file, get_pretty_date, save_file
 
-def _make_request_get(token, path: str, params):
-    query = "?"
-    first = True
-    for k in params.keys():
-        if not first:
-            query += "&"
-        else:
-            first = False
-        query += f"{k}={params[k]}"
-    url = "https://api.helpscout.net/v2/" + path + query
-    print(f'GET: {url}')
-    return requests.get(url, headers={
-        "Authorization": f"Bearer {token}"
+def refresh_token():
+    print('Token Expired, Refreshing token')
+    if not os.path.exists('token.json'):
+        raise Exception('Token File does not exist, please manually authenticate')
+    token_data = json.loads(open_file('token.json'))
+    config = json.loads(open_file('config.json'))
+    res = requests.post('https://api.helpscout.net/v2/oauth2/token', json={
+        "refresh_token": token_data['refresh_token'],
+        "client_id": config['helpscout_id'],
+        "client_secret": config['helpscout_secret'],
+        "grant_type": 'refresh_token'
     })
-
-def _make_request_post(token, path: str, params):
-    first = True
-    url = "https://api.helpscout.net/v2/" + path
-    print(f'POST: {url}')
-    return requests.post(url, 
-        headers={ "Authorization": f"Bearer {token}" }, 
-        json=params
-    )
+    if res.status_code != 200:
+        raise Exception(f'Error refreshing token, please manually authenticate\n{res.content.decode()}')
+    data = res.json()
+    save_file(json.dumps(data))
+    print('Token refreshed successfully')
+    return data['access_token']
 
 def count_tokens_for_file(filepath: str):
     objects = open_file(filepath).split('\n')
@@ -175,6 +170,37 @@ class HelpscoutAPI:
         with open(path, 'w') as f:
             f.writelines(json.dumps(conversations))
 
+    def _make_request_get(self, path: str, params):
+        query = "?"
+        first = True
+        for k in params.keys():
+            if not first:
+                query += "&"
+            else:
+                first = False
+            query += f"{k}={params[k]}"
+        url = "https://api.helpscout.net/v2/" + path + query
+        print(f'GET: {url}')
+        res =  requests.get(url, headers={
+            "Authorization": f"Bearer {self.token}"
+        })
+        if res.status_code == 401:
+            self.token = refresh_token()
+            self._make_request_get(path, params)
+        return res
+
+    def _make_request_post(self, path: str, params):
+        url = "https://api.helpscout.net/v2/" + path
+        print(f'POST: {url}')
+        res = requests.post(url, 
+            headers={ "Authorization": f"Bearer {self.token}" }, 
+            json=params
+        )
+        if res.status_code == 401:
+            self.token = refresh_token()
+            self._make_request_post(path, params)
+        return res
+
     def load_conversation_list(self, file_name) -> List[Conversation]:
         folder = 'conversation_lists'
         if not os.path.exists(folder):
@@ -194,7 +220,7 @@ class HelpscoutAPI:
             convs = self.load_conversation_list(page)
         if convs is None:
             print(f"Listing conversations page: {page}")
-            res = _make_request_get(self.token, 'conversations', {
+            res = self._make_request_get('conversations', {
                 "page": page,
                 "embed": "threads",
                 "status": "open" if open_conv else "closed"
@@ -227,7 +253,7 @@ class HelpscoutAPI:
 
     def send_note(self, conv_id: str, text: str):
         print(f'Sending Note for conv: {conv_id}')
-        _make_request_post(self.token, f'conversations/{conv_id}/notes', {
+        self._make_request_post(f'conversations/{conv_id}/notes', {
             "text": text
         })
 
