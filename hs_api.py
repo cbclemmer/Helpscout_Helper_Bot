@@ -271,7 +271,7 @@ class HelpscoutAPI:
         conv_str = conversation.for_gpt()
         chat = GptChat('summarize.prompt')
         try:
-            msg = chat.send(conv_str, 300)
+            msg = chat.send(conv_str, 300).replace('\n', '<br>\n')
             self.send_note(conversation.id, f'<h2>Scout Bot 🤖</h2><p><b>I summarized the conversation for you:</b></p><p>{msg}</p>')
         except Exception as e:
             print(e)
