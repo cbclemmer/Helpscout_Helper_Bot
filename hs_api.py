@@ -245,7 +245,7 @@ class HelpscoutAPI:
         conv_str = conversation.for_gpt()
         chat = GptChat('summarize.prompt')
         try:
-            msg = chat.send(conv_str, 'user', 200)
+            msg = chat.send(conv_str, 200)
             self.send_note(conversation.id, msg)
         except Exception as e:
             print(e)
