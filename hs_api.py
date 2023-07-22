@@ -56,6 +56,11 @@ class Thread:
             self.action = data['action']['text']
         self.type = data['type']
         self.source = data['source']['via']
+        self.user = self.source
+        if 'email' in data['createdBy']:
+            email = data['createdBy']['email']
+            if email is not None and len(email) > 0:
+                self.user = email[:email.index('@')]
 
     def _sanitize(self, text: str) -> str:
         text = re.sub(r'\[(.*?)\]\((.*?)\)', r'LINK', text)
@@ -82,7 +87,7 @@ ___________THREAD_______________
 ID: {self.id}
 Action: {self.action}
 Type: {self.type}
-Source: {self.source}
+User: {self.user}
 {self.body}
 """
 
