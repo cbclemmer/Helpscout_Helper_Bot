@@ -7,6 +7,7 @@ from hs_api import load_api
 api = load_api()
 
 def process_data(data_string):
+    print('Recieved Data')
     data = json.loads(data_string)
     with open('raw_recieve.txt', 'a') as f:
         f.write(data_string + '\n\n\n\n\n\n')

@@ -279,11 +279,13 @@ class HelpscoutAPI:
         self.recieve_conversation(conversation)
 
     def recieve_conversation(self, conversation: Conversation):
+        print('Recieved Conversation')
         last_thread = conversation.threads[-1]
         if last_thread.source == 'user' and last_thread.type != 'lineitem':
             self.process_user_message(conversation)
             return
        
+        print('Responding to Conversation')
         prompt = conversation.for_gpt()
         completions = self.complete.complete(prompt, {
             "n": 3,
