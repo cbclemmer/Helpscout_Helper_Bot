@@ -264,8 +264,8 @@ class HelpscoutAPI:
 
     def process_user_message(self, conversation: Conversation):
         print(f'Processing user message for conversation {conversation.id}')
-        message = conversation.threads[-1].body
-        if '@ScoutBot' not in message:
+        message = conversation.threads[-1].body.lower()
+        if '@scoutbot' not in message:
             return
         if 'good bot' in message:
             return self.process_good_bot(conversation, message)
@@ -316,7 +316,7 @@ class HelpscoutAPI:
         if last_thread.source == 'user' and last_thread.type != 'lineitem':
             self.process_user_message(conversation)
             return
-       
+        return # Disable responses for now
         print('Responding to Conversation')
         prompt = conversation.for_gpt()
         completions = self.complete.complete(prompt, {
