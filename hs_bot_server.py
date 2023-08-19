@@ -16,6 +16,11 @@ def process_data(data_string):
     api.recieve_message(data)
 
 class RequestHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain')
+        self.end_headers()
+        self.wfile.write('success'.encode())
     def do_POST(self):
         try:
             content_length = int(self.headers['Content-Length'])
